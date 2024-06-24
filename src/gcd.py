@@ -81,6 +81,20 @@ def gcd_extended(num: int, modulus: int) -> Tuple[int, int, int]:
 
 
 def modular_inverse_gcd(num: int, modulus: int) -> Optional[int]:
+    """
+    Find the modular inverse of a given number using the Extended Euclidean Algorithm.
+
+    The modular inverse of a number `num` modulo `modulus` is a number `x` such that:
+    (num * x) % modulus == 1. This function uses the Extended Euclidean Algorithm to find such
+    an `x`, if it exists.
+
+    Parameters:
+    num (int): The number to find the modular inverse of.
+    modulus (int): The modulus.
+
+    Returns:
+    Optional[int]: The modular inverse if it exists, otherwise None.
+    """
     if modulus <= 0:
         return None
 
