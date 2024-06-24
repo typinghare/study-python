@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 
-def inverse_brute_force(num: int, modulus: int) -> Optional[int]:
+def modular_inverse(num: int, modulus: int) -> Optional[int]:
     """
     Find the modular inverse of a given number using brute force. This function iterates through
     all possible values from 0 to mod-1 to find the modular inverse.
@@ -49,16 +49,54 @@ def gcd(num1: int, num2: int) -> int:
     return gcd(num2, num1 % num2)
 
 
-def inverse_gcd(num: int, modulus: int) -> int:
-    return gcd(num, modulus)
+def gcd_extended(num: int, modulus: int) -> Tuple[int, int, int]:
+    """
+    Extended Euclidean Algorithm to find the greatest common divisor of two numbers.
+    Additionally, it finds integers x and y such that: gcd(num, modulus) = num * x + modulus * y
+
+    Parameters:
+    num (int): The first integer.
+    modulus (int): The second integer.
+
+    Returns:
+    Tuple[int, int, int]: A tuple containing the gcd and the coefficients x and y.
+    """
+
+    def inner(_num: int, _modulus: int) -> int:
+        nonlocal x, y
+        if _num == 0:
+            x, y = 0, 1
+            return _modulus
+
+        _gcd = inner(_modulus % _num, _num)
+        x_tmp, y_tmp = x, y
+        x = y_tmp - (_modulus // _num) * x_tmp
+        y = x_tmp
+
+        return _gcd
+
+    x, y = 1, 0
+    __gcd = inner(num, modulus)
+    return __gcd, x, y
+
+
+def modular_inverse_gcd(num: int, modulus: int) -> Optional[int]:
+    if modulus <= 0:
+        return None
+
+    _gcd, a, b = gcd_extended(num, modulus)
+    if _gcd != 1:
+        return None
+
+    return (a % modulus + modulus) % modulus
 
 
 # Test inverse_brute_force
-print(inverse_brute_force(3, 11))  # Expected output: 4 (since 3 * 4 % 11 == 1)
-print(inverse_brute_force(10, 17))  # Expected output: 12 (since 10 * 12 % 17 == 1)
-print(inverse_brute_force(3, 6))  # Expected output: None (since 3 has no inverse mod 6)
-print(inverse_brute_force(0, 5))  # Expected output: None (0 has no modular inverse)
-print(inverse_brute_force(3, -11))  # Expected output: None (modulus should be positive)
+print(modular_inverse(3, 11))  # Expected output: 4 (since 3 * 4 % 11 == 1)
+print(modular_inverse(10, 17))  # Expected output: 12 (since 10 * 12 % 17 == 1)
+print(modular_inverse(3, 6))  # Expected output: None (since 3 has no inverse mod 6)
+print(modular_inverse(0, 5))  # Expected output: None (0 has no modular inverse)
+print(modular_inverse(3, -11))  # Expected output: None (modulus should be positive)
 
 # test gcd
 print(gcd(48, 18))  # Expected output: 6
@@ -67,9 +105,13 @@ print(gcd(7, 7))  # Expected output: 7
 print(gcd(10, 5))  # Expected output: 5
 print(gcd(-48, -18))  # Expected output: 6
 
+# Test gcd_extended
+print(gcd_extended(30, 20))  # Expected output: (10, 1, -1)
+print(gcd_extended(35, 64))  # Expected output: (1, 11, -6)
+
 # Test inverse_gcd
-print(inverse_gcd(3, 11))  # Expected output: 4 (since 3 * 4 % 11 == 1)
-print(inverse_gcd(10, 17))  # Expected output: 12 (since 10 * 12 % 17 == 1)
-print(inverse_gcd(3, 6))  # Expected output: None (since 3 has no inverse mod 6)
-print(inverse_gcd(0, 5))  # Expected output: None (0 has no modular inverse)
-print(inverse_gcd(3, -11))  # Expected output: None (mod should be positive)
+print(modular_inverse_gcd(3, 11))  # Expected output: 4 (since 3 * 4 % 11 == 1)
+print(modular_inverse_gcd(10, 17))  # Expected output: 12 (since 10 * 12 % 17 == 1)
+print(modular_inverse_gcd(3, 6))  # Expected output: None (since 3 has no inverse mod 6)
+print(modular_inverse_gcd(0, 5))  # Expected output: None (0 has no modular inverse)
+print(modular_inverse_gcd(3, -11))  # Expected output: None (mod should be positive)
