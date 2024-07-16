@@ -5,9 +5,8 @@ from gcd import modular_inverse_gcd
 inverse = modular_inverse_gcd
 
 # Define a list containing all uppercase and lowercase letters
-letters: List[str] = \
-    [chr(letter) for letter in range(ord('A'), ord('Z') + 1)] + \
-    [chr(letter) for letter in range(ord('a'), ord('z') + 1)]
+letters: List[str] = [chr(letter) for letter in range(ord('A'), ord('Z') + 1)] + \
+                     [chr(letter) for letter in range(ord('a'), ord('z') + 1)]
 
 
 def letter_to_index(letter: str) -> int:
@@ -47,14 +46,12 @@ def encrypt(num: int, k: int, b: int, m: int) -> int:
     - x is the number to encrypt,
     - k is the coefficient,
     - b is the bias,
-    - m is the modulus.
-
-    The modulus m must be greater than zero.
+    - m is the modulus, which must be greater than zero.
 
     :param num: The number to encrypt.
     :param k: The coefficient to use.
     :param b: The bias to use.
-    :param m: The modulus to use. The modulus must be greater than zero.
+    :param m: The modulus to use.
     :return: The encrypted number.
     """
     return (k * num + b) % m
@@ -71,7 +68,7 @@ def decrypt(num: int, k: int, b: int, m: int) -> int:
     - x is the number to decrypt,
     - k is the coefficient,
     - b is the bias,
-    - m is the modulus.
+    - m is the modulus, which must be greater than zero.
 
     :param num: The number to decrypt.
     :param k: The coefficient to use.
@@ -132,49 +129,81 @@ def decrypt_caesar_cipher(string: str, k: int, b: int) -> str:
 
     return ''.join([index_to_letter(index) for index in decrypted_index_list])
 
-# def concatenate_integers(int_list: List[int]) -> int:
-#     """
-#     Combines a list of integers into a single concatenated string representation.
-#
-#     :param int_list: The list of integers to combine.
-#     :return: The concatenated string representation of the integers.
-#     """
-#     return int(''.join(map(str, int_list)))
-#
-#
-# def divide_into_two_letter_strings(string: str) -> List[str]:
-#     res: List[str] = []
-#     i: int = len(string)
-#     while i > 1:
-#         res.append(string[i - 2:i])
-#         i -= 2
-#
-#     if i == 1:
-#         res.append(string[0])
-#
-#     res.reverse()
-#     return res
+
+def concatenate_integers(int_list: List[int]) -> str:
+    """
+    Concatenates a list of integers into a single string.
+    If an integer is a single digit, it is zero-padded to become a two-digit number string.
+
+    :param int_list: A list of integers to concatenate.
+    :return The concatenated result as a string.
+    """
+    two_digit_list = [f"{n:02d}" for n in int_list]
+
+    return ''.join(two_digit_list)
 
 
-# def encrypt_block_cipher(string: str, k: int, b: int, width: int) -> str:
-#     modulus: int = concatenate_integers([len(letters)] * width)
-#     index_list: List[int] = [letter_to_index(letter) for letter in string]
-#
-#     block_list: List[int] = []
-#     for i in range(0, len(index_list), width):
-#         window: List[int] = index_list[i:i + width]
-#         block_list.append(concatenate_integers(window))
-#
-#     encrypted_block_list: List[int] = [encrypt(block, k, b, modulus) for block in block_list]
-#     encrypted_index_list: List[int] = []
-#     for block in encrypted_block_list:
-#         block_str: str = str(block)
-#         strings: List[str] = divide_into_two_letter_strings(block_str)
-#         for string in strings:
-#             encrypted_index_list.append(int(string))
-#
-#     return ''.join([index_to_letter(index) for index in encrypted_index_list])
-#
-#
-# def decrypt_block_cipher(string: str, k: int, b: int) -> str:
-#     return ""
+def encrypt_block_cipher(text: str, k: int, b: int, width: int) -> int:
+    """
+    Encrypts a text using block cipher technique with affine transformation.
+
+    :param text: The text to encrypt.
+    :param k: The coefficient for the affine cipher.
+    :param b: The bias for the affine cipher.
+    :param width: The width of each block in the text.
+    :return: The encrypted text as a large integer.
+    """
+    modulus: int = int(concatenate_integers([len(letters)] * width))
+    block_width: int = width * 2
+    index_list: List[int] = [letter_to_index(letter) for letter in text]
+
+    blocks = [int(concatenate_integers(index_list[max(0, i - width):i]))
+              for i in range(len(index_list), 0, -width)]
+    blocks.reverse()
+
+    encrypted_blocks = [encrypt(block, k, b, modulus) for block in blocks]
+    encrypted_str_blocks = [f'{block:0{block_width}d}' for block in encrypted_blocks]
+
+    return int(''.join(encrypted_str_blocks))
+
+
+def decrypt_block_cipher(large_int: int, k: int, b: int, width: int, original_text_length: int) \
+        -> str:
+    """
+    Decrypts a large integer encrypted using block cipher technique with affine transformation.
+
+    :param large_int: The encrypted large integer.
+    :param k: The coefficient used in the encryption process.
+    :param b: The bias used in the encryption process.
+    :param width: The width of each block in the original text.
+    :param original_text_length: The length of the original text.
+    :return: The decrypted text.
+    """
+    modulus = int(concatenate_integers([len(letters)] * width))
+    block_width = 2 * width
+    large_int_str = f'{large_int:0{(len(str(large_int)) + block_width - 1) // block_width * block_width}d}'
+
+    blocks = [decrypt(int(large_int_str[i:i + block_width]), k, b, modulus)
+              for i in range(0, len(large_int_str), block_width)]
+
+    indices = [int(f'{block:0{block_width}d}'[i:i + 2])
+               for block in blocks
+               for i in range(0, block_width, 2)]
+
+    return ''.join(index_to_letter(index) for index in indices)[-original_text_length:]
+
+
+def stringify(large_int: int) -> str:
+    """
+    Converts a large integer to a string representation using a base determined by the length of letters.
+
+    :param large_int: The large integer to convert.
+    :return: The string representation of the large integer.
+    """
+    base = len(letters)
+    result = ''
+    while large_int > 0:
+        result += index_to_letter(large_int % base)
+        large_int = large_int // base
+
+    return result
