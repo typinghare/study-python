@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from gcd import modular_inverse_gcd
 
 # The inverse function finds the inverse of a number by extended Euclidean algorithm
@@ -76,7 +76,9 @@ def decrypt(num: int, k: int, b: int, m: int) -> int:
     :param m: The modulus to use. The modulus must be greater than zero.
     :return: The decrypted number.
     """
-    k_inverse: int = inverse(k, m)
+    k_inverse: Optional[int] = inverse(k, m)
+    if k_inverse is None:
+        raise ValueError(f'The inverse of k does not exist: {k}')
 
     return (k_inverse * (num - b)) % m
 
@@ -157,14 +159,22 @@ def encrypt_block_cipher(text: str, k: int, b: int, width: int) -> int:
     block_width: int = width * 2
     index_list: List[int] = [letter_to_index(letter) for letter in text]
 
-    blocks = [int(concatenate_integers(index_list[max(0, i - width):i]))
-              for i in range(len(index_list), 0, -width)]
-    blocks.reverse()
+    block_list: List[int] = []
+    right: int = len(index_list)
+    while right > 0:
+        left: int = max(0, right - width)
+        window: List[int] = index_list[left:right]
+        block_list.append(int(concatenate_integers(window)))
+        right -= width
+    block_list.reverse()
 
-    encrypted_blocks = [encrypt(block, k, b, modulus) for block in blocks]
-    encrypted_str_blocks = [f'{block:0{block_width}d}' for block in encrypted_blocks]
+    encrypted_block_list: List[int] = [encrypt(block, k, b, modulus) for block in block_list]
+    encrypted_block_str_list: List[str] = []
+    for block in encrypted_block_list:
+        block_str: str = str(block)
+        encrypted_block_str_list.append('0' * (block_width - len(block_str)) + block_str)
 
-    return int(''.join(encrypted_str_blocks))
+    return int(''.join(encrypted_block_str_list))
 
 
 def decrypt_block_cipher(large_int: int, k: int, b: int, width: int, original_text_length: int) \
@@ -179,18 +189,27 @@ def decrypt_block_cipher(large_int: int, k: int, b: int, width: int, original_te
     :param original_text_length: The length of the original text.
     :return: The decrypted text.
     """
-    modulus = int(concatenate_integers([len(letters)] * width))
-    block_width = 2 * width
-    large_int_str = f'{large_int:0{(len(str(large_int)) + block_width - 1) // block_width * block_width}d}'
+    modulus: int = int(concatenate_integers([len(letters)] * width))
+    block_width: int = 2 * width
+    large_int_str: str = str(large_int)
+    padding_len: int = block_width - len(large_int_str) % block_width
+    large_int_str = '0' * padding_len + large_int_str
 
-    blocks = [decrypt(int(large_int_str[i:i + block_width]), k, b, modulus)
-              for i in range(0, len(large_int_str), block_width)]
+    block_str_list: List[str] = []
+    for i in range(0, len(large_int_str), block_width):
+        block_str_list.append(large_int_str[i:i + block_width])
+    block_list: List[int] = [decrypt(int(block), k, b, modulus) for block in block_str_list]
 
-    indices = [int(f'{block:0{block_width}d}'[i:i + 2])
-               for block in blocks
-               for i in range(0, block_width, 2)]
+    index_list: List[int] = []
+    for block in block_list:
+        block_str: str = str(block)
+        block_str = '0' * (block_width - len(block_str)) + block_str
+        for i in range(0, len(block_str), 2):
+            index_list.append(int(block_str[i:i + 2]))
 
-    return ''.join(index_to_letter(index) for index in indices)[-original_text_length:]
+    char_list: List[str] = [index_to_letter(index) for index in index_list]
+
+    return ''.join(char_list[len(char_list) - original_text_length:])
 
 
 def stringify(large_int: int) -> str:
